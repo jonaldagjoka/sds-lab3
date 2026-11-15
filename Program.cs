@@ -2,9 +2,11 @@
 using Microsoft.Data.SqlClient;
 using System.Net;
 
-var app = WebApplication.CreateBuilder(args).Build();
+var builder = WebApplication.CreateBuilder(args);
 
-const string ApiKey = "x8F3kq9ZpL2vR7tY1wN4bC6dE0hJ5mQs";
+var app = builder.Build();
+
+var apiKey = builder.Configuration["ApiKey"];
 
 const string Conn = @"Server=(localdb)\MSSQLLocalDB;" +
                     "Database=Guestbook;Integrated Security=True";
@@ -15,14 +17,20 @@ app.MapGet("/search", (string q) =>
     db.Open();
 
     var cmd = new SqlCommand(
-        "SELECT Name, Msg FROM Entries WHERE Msg LIKE '%"
-        + q + "%'", db);
+        "SELECT Name, Msg FROM Entries WHERE Msg LIKE @q", db);
+
+    cmd.Parameters.AddWithValue("@q", "%" + q + "%");
 
     using var r = cmd.ExecuteReader();
 
     var html = "";
+
     while (r.Read())
-        html += $"<p>{r[0]}: {r[1]}</p>";
+    {
+        html += "<p>" +
+            WebUtility.HtmlEncode($"{r[0]}: {r[1]}") +
+            "</p>";
+    }
 
     return Results.Content(html, "text/html");
 });
